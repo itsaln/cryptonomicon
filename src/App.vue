@@ -68,10 +68,25 @@
       </section>
 
       <template v-if="tickers.length">
+        <div>
+          <button
+            v-if="page > 1"
+            @click="page = page - 1"
+            class="mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Назад
+          </button>
+          <button
+            v-if="hasNextPage"
+            @click="page = page + 1"
+            class="mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Вперед
+          </button>
+          <div>Фильтр: <input v-model="filter"/></div>
+        </div>
         <hr class="w-full border-t border-gray-600 my-4"/>
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="t of tickers"
+            v-for="t of filteredTickers()"
             :key="t.name"
             @click="select(t)"
             :class="{
@@ -168,7 +183,10 @@
           {name: 'DEMO3', price: '-'}
         ],
         sel: null,
-        graph: []
+        graph: [],
+        page: 1,
+        filter: '',
+        hasNextPage: true
       }
     },
     created() {
@@ -182,6 +200,14 @@
       }
     },
     methods: {
+      filteredTickers() {
+        const start = (this.page - 1) * 6
+        const end = this.page * 6
+
+        const filteredTickers = this.tickers.filter(ticker => ticker.name.includes(this.filter))
+        this.hasNextPage = filteredTickers.length > end
+        return filteredTickers.slice(start, end)
+      },
       subscribeToUpdates(tickerName) {
         setInterval(async () => {
           const key = process.env.VUE_APP_CRYPTOCOMPARE
@@ -202,6 +228,7 @@
           price: '-'
         }
         this.tickers.push(currentTicker)
+        this.filter = ''
         localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
         this.subscribeToUpdates(currentTicker.name)
       },
@@ -216,6 +243,12 @@
         const maxValue = Math.max(...this.graph)
         const minValue = Math.min(...this.graph)
         return this.graph.map(price => 5 + ((price - minValue) * 95) / (maxValue - minValue))
+      }
+    },
+    watch: {
+      filter() {
+        this.page = 1
+        window.history.pushState(null, document.title, `${window.location.pathname}?filter=${this.filter}`)
       }
     }
   }
