@@ -99,7 +99,7 @@
                 {{ t.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ t.price }}
+                {{ formatPrice(t.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
@@ -187,6 +187,8 @@
   // [x] График сломан если везде одинаковые значения
   // [x] При удалении тикера остается выбор
 
+  import {loadTickers, subscribeToTicker} from './api'
+
   export default {
     name: 'App',
     data() {
@@ -226,9 +228,11 @@
       if (tickersData) {
         this.tickers = JSON.parse(tickersData)
         this.tickers.forEach(ticker => {
-          this.subscribeToUpdates(ticker.name)
+          subscribeToTicker(ticker.name, () => {})
         })
       }
+
+      setInterval(this.updateTickers, 5000)
     },
     computed: {
       startIndex() {
@@ -264,19 +268,18 @@
       }
     },
     methods: {
-      subscribeToUpdates(tickerName) {
-        setInterval(async () => {
-          const key = process.env.VUE_APP_CRYPTOCOMPARE
-          const res = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=${key}`)
-          const data = await res.json()
-          this.tickers.find(t => t.name === tickerName).price = data['USD'] > 1 ? data.USD.toFixed(2) : data['USD'].toPrecision(2)
-
-          if (this.selectedTicker?.name === tickerName) {
-            this.graph.push(data['USD'])
-          }
-
-        }, 5000)
-        this.ticker = ''
+      formatPrice(price) {
+        return price > 1 ? price.USD.toFixed(2) : price['USD'].toPrecision(2)
+      },
+      async updateTickers() {
+        if (!this.tickers.length) {
+          return
+        }
+        const exchangeData = await loadTickers(this.tickers.map(t => t.name))
+        this.tickers.forEach(ticker => {
+          const price = exchangeData[ticker.name.toUpperCase()]
+          ticker.price = price ?? '-'
+        })
       },
       add() {
         const currentTicker = {
@@ -285,7 +288,6 @@
         }
         this.tickers = [...this.tickers, currentTicker]
         this.filter = ''
-        this.subscribeToUpdates(currentTicker.name)
       },
       select(ticker) {
         this.selectedTicker = ticker
