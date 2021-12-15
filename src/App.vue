@@ -187,7 +187,7 @@
   // [x] График сломан если везде одинаковые значения
   // [x] При удалении тикера остается выбор
 
-  import {loadTickers, subscribeToTicker} from './api'
+  import {subscribeToTicker, unsubscribeFromTicker} from './api'
 
   export default {
     name: 'App',
@@ -228,7 +228,9 @@
       if (tickersData) {
         this.tickers = JSON.parse(tickersData)
         this.tickers.forEach(ticker => {
-          subscribeToTicker(ticker.name, () => {})
+          subscribeToTicker(ticker.name, newPrice => {
+            this.updateTicker(ticker.name, newPrice)
+          })
         })
       }
 
@@ -268,18 +270,24 @@
       }
     },
     methods: {
+      updateTicker(tickerName, price) {
+        this.tickers.filter(t => t.name === tickerName).forEach(t => {t.price = price})
+      },
       formatPrice(price) {
-        return price > 1 ? price.USD.toFixed(2) : price['USD'].toPrecision(2)
+        if (price === '-') {
+          return price
+        }
+        return price > 1 ? price.toFixed(2) : price.toPrecision(2)
       },
       async updateTickers() {
-        if (!this.tickers.length) {
-          return
-        }
-        const exchangeData = await loadTickers(this.tickers.map(t => t.name))
-        this.tickers.forEach(ticker => {
-          const price = exchangeData[ticker.name.toUpperCase()]
-          ticker.price = price ?? '-'
-        })
+        // if (!this.tickers.length) {
+        //   return
+        // }
+        // const exchangeData = await loadTickers(this.tickers.map(t => t.name))
+        // this.tickers.forEach(ticker => {
+        //   const price = exchangeData[ticker.name.toUpperCase()]
+        //   ticker.price = price ?? '-'
+        // })
       },
       add() {
         const currentTicker = {
@@ -288,6 +296,9 @@
         }
         this.tickers = [...this.tickers, currentTicker]
         this.filter = ''
+        subscribeToTicker(this.ticker.name, newPrice => {
+          this.updateTicker(this.ticker.name, newPrice)
+        })
       },
       select(ticker) {
         this.selectedTicker = ticker
@@ -298,6 +309,7 @@
         if (this.selectedTicker === tickerToRemove) {
           this.selectedTicker = null
         }
+        unsubscribeFromTicker(tickerToRemove.name)
       }
     },
     watch: {
