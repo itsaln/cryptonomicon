@@ -68,6 +68,7 @@
       </section>
 
       <template v-if="tickers.length">
+        <hr class="w-full border-t border-gray-600 my-4"/>
         <div>
           <button
             v-if="page > 1"
@@ -131,7 +132,7 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ sel.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div ref="graph" class="flex items-end border-gray-600 border-b border-l h-64">
           <div
             v-for="(bar, idx) of normalizedGraph"
             :key="idx"
@@ -172,13 +173,15 @@
 </template>
 
 <script>
+  // H - homework - домашнее задание
+
   // [x] 1. Одинаковый код в watch | Критичность: 3
-  // [ ] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
-  // [ ] 3. Количество запросов | КритичностьЖ 4
-  // [ ] 4. Запросы напрямую внутри компонента (???) | Критичность: 5
-  // [ ] 5. Обработка ошибок API | Критичность: 5
+  // [x] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
+  // [x] 3. Количество запросов | Критичность 4
+  // [x] 4. Запросы напрямую внутри компонента (???) | Критичность: 5
+  // [H] 5. Обработка ошибок API | Критичность: 5
   // [x] 6. Наличие в состоянии ЗАВИСИМЫХ ДАННЫХ | Критичность: 5+
-  // [ ] 7. График ужасно выглядит если будет много цен | Критичность: 2
+  // [x] 7. График ужасно выглядит если будет много цен | Критичность: 2
   // [x] 8. При удалении тикера  не изменяется localStorage | Критичность: 4
   // [ ] 9. LocalStorage и анонимные вкладки | Критичность: 3
   // [ ] 10. Магические строки и числа (URL, 5000 миллисекунд задержк, ключь локал стореджа, количество на странице) | Критичность: 1
@@ -200,6 +203,7 @@
         selectedTicker: null,
 
         graph: [],
+        maxGraphElements: 1,
 
         page: 1
       }
@@ -236,6 +240,12 @@
 
       setInterval(this.updateTickers, 5000)
     },
+    mounted() {
+      window.addEventListener('resize', this.calculateMaxGraphElements)
+    },
+    beforeUnmount() {
+      window.removeEventListener('resize', this.calculateMaxGraphElements)
+    },
     computed: {
       startIndex() {
         return (this.page - 1) * 6
@@ -270,10 +280,19 @@
       }
     },
     methods: {
+      calculateMaxGraphElements() {
+        if (!this.$refs.graph) {
+          return
+        }
+        this.maxGraphElements = this.$refs.graph.clientWidth / 38
+      },
       updateTicker(tickerName, price) {
         this.tickers.filter(t => t.name === tickerName).forEach(t => {
           if (t === this.selectedTicker) {
             this.graph.push(price)
+            while (this.graph.length > this.maxGraphElements) {
+              this.graph.shift()
+            }
           }
           t.price = price
         })
@@ -301,7 +320,6 @@
       },
       handleDelete(tickerToRemove) {
         this.tickers = this.tickers.filter(t => t !== tickerToRemove)
-
         if (this.selectedTicker === tickerToRemove) {
           this.selectedTicker = null
         }
