@@ -50,5 +50,3 @@ export const unsubscribeFromTicker = ticker => {
   tickersHandlers.delete(ticker)
   unsubscribeFromTickerOnWs(ticker)
 }
-
-window.tickers = tickersHandlers
