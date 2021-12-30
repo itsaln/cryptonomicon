@@ -61,7 +61,7 @@
     },
     methods: {
       add() {
-        if (this.tickers.length === 0) {
+        if (this.ticker.length === 0) {
           return
         }
         this.$emit('add-ticker', this.ticker)
